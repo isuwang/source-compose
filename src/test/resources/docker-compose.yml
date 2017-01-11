@@ -1,0 +1,232 @@
+version: '2'
+services:
+  mysql:
+    container_name: mysql
+    image: docker.oa.isuwang.com:5000/mysql:5.6
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    ports:
+      - "3306:3306"
+    labels:
+      - project.scm=http://git.oa.isuwang.com/isuwang-docker/mysql-5-6.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+
+  redis:
+    container_name: redis
+    image: docker.oa.isuwang.com:5000/redis:3.0.2
+    ports:
+      - "6379:6379"
+    labels:
+      - project.scm=http://git.oa.isuwang.com/isuwang-docker/redis.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+
+  zookeeper:
+    container_name: zookeeper
+    image: docker.oa.isuwang.com:5000/zookeeper:3.4.8
+    ports:
+      - "2181:2181"
+    labels:
+      - project.scm=http://git.oa.isuwang.com/isuwang-docker/zookeeper.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+      - project.dependency.2=http://git.oa.isuwang.com/isuwang-docker/jdk8.git@@master
+
+  canal:
+    container_name: canal
+    image: docker.oa.isuwang.com:5000/canal:1.0.21
+    ports:
+      - "11111:11111"
+    labels:
+      - project.scm=http://git.oa.isuwang.com/isuwang-docker/canal.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+      - project.dependency.2=http://git.oa.isuwang.com/isuwang-docker/jdk8.git@@master
+
+  kafka:
+    container_name: kafka
+    image: docker.oa.isuwang.com:5000/kafka:0.10
+    ports:
+      - "2181:2181"
+      - "8092:8092"
+    labels:
+      - project.scm=http://git.oa.isuwang.com/isuwang-docker/kafka.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+      - project.dependency.2=http://git.oa.isuwang.com/isuwang-docker/jdk8.git@@master
+
+#oldName:memcachedKuaisuadmin,
+  memcached:
+    container_name: memcached
+    image: docker.oa.isuwang.com:5000/memcached
+    ports:
+      - "11211:11211"
+    labels:
+      - project.scm=http://git.oa.isuwang.com/isuwang-docker/memcached.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+
+  isuwang-cache:
+    container_name: isuwang-cache
+    image: docker.oa.isuwang.com:5000/isuwang-cache:160627
+    environment:
+     - db_ip=mysql
+     - db_user=iplastest
+     - db_passwd=123456
+     - canal_canalServerIp=canal
+     - redis_host=redis
+     - kafka_producerMetadataBrokerList=kafka:8092
+     - kafka_zookeeperConnect=kafka:2181
+    extra_hosts:
+     - "redis:${redis_host_ip}"
+     - "mysql:${mysql_host_ip}"
+     - "zookeeper:${zookeeper_host_ip}"
+     - "kafka:${kafka_host_ip}"
+     - "canal:${canal_host_ip}"
+    labels:
+      - project.scm=git@git.oa.isuwang.com:isuwang-docker/isuwang-cache.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+      - project.dependency.2=http://git.oa.isuwang.com/isuwang-docker/jdk8.git@@master
+      - project.dependency.3=http://git.oa.isuwang.com/isuwang-docker/redis.git@@master
+      - project.dependency.4=http://git.oa.isuwang.com/isuwang-docker/kafka.git@@master
+      - project.dependency.5=http://git.oa.isuwang.com/isuwang-docker/zookeeper.git@@master
+      - project.dependency.6=http://git.oa.isuwang.com/isuwang-docker/canal.git@@master
+
+  ksservices:
+    container_name: ksservices
+    image: docker.oa.isuwang.com:5000/ksservices:master
+    env_file:
+     - ./envs/db.env
+     - ./envs/common.env
+     - ./envs/3rd_party.env
+     - ./envs/services.env
+    environment:
+     - RUN_MODE=RELEASE
+     - PUBLISH_MODE=TEST
+     - BRANCH_MODE=MASTER
+
+     - E_JAVA_OPTS= -Xms128M -Xmx384M -XX:PermSize=128M -XX:MaxPermSize=384M
+
+     - REDIS_MODE=ENABLE
+
+    ports:
+      - "9020:22"
+      - "9091:9091"
+      - "9991:9997"
+      - "9998:9999"
+
+    extra_hosts:
+      - "redis:${redis_host_ip}"
+      - "mysql:${mysql_host_ip}"
+      - "zookeeper:${zookeeper_host_ip}"
+    labels:
+      - project.scm=http://git.oa.isuwang.com/isuwang-com/ksservices.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+      - project.dependency.2=http://git.oa.isuwang.com/isuwang-docker/jdk8.git@@master
+
+
+  soa-services:
+    container_name: soa-services
+    image: docker.oa.isuwang.com:5000/soa_service:master
+    env_file:
+      - ./envs/db.env
+      - ./envs/common.env
+      - ./envs/services.env
+      - ./envs/3rd_party.env
+    environment:
+      - soa_core_pool_size=100
+      - soa_monitor_enable=FALSE
+      - E_JAVA_OPTS= -Xms256M -Xmx512M -XX:PermSize=256M -XX:MaxPermSize=512M
+      - ZOOKEEPER_ENV_E_JAVA_OPTS= -Xms256M -Xmx512M -XX:PermSize=256M -XX:MaxPermSize=512M
+    ports:
+      - "9021:22"
+      - "9080:9080"
+    extra_hosts:
+      - "redis:${redis_host_ip}"
+      - "mysql:${mysql_host_ip}"
+      - "zookeeper:${zookeeper_host_ip}"
+    labels:
+      - project.scm=http://git.oa.isuwang.com/isuwang-docker/soa-builder.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+      - project.dependency.2=http://git.oa.isuwang.com/isuwang-docker/jdk8.git@@master
+
+  kuaisuadmin:
+    container_name: kuaisuadmin
+    image: docker.oa.isuwang.com:5000/kuaisuadmin:master
+    env_file:
+     - ./envs/db.env
+     - ./envs/common.env
+     - ./envs/3rd_party.env
+     - ./envs/services.env
+    environment:
+     - RUN_MODE=DEVELOP
+     - PUBLISH_MODE=TEST
+     - BRANCH_MODE=MASTER
+
+     - FRONT_WEB_SITE=${FRONT_WEB_SITE}
+     - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jun.encoding=UTF-8 -Dname=kuaisuadmin-hotfixes -Xms128m -Xmx384m -Xss256K -XX:PermSize=128m -XX:MaxPermSize=384m -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=9998 -Xloggc:/tomcat/logs/gc.log -XX:+PrintGCDateStamps -XX:+PrintGCDetails -XX:NewRatio=1 -XX:SurvivorRatio=30 -XX:+UseParallelGC -XX:+UseParallelOldGC
+    ports:
+      - "9022:22"
+      - "9090:8080"
+      - "9993:9998"
+    extra_hosts:
+      - "redis:${redis_host_ip}"
+      - "mysql:${mysql_host_ip}"
+      - "zookeeper:${zookeeper_host_ip}"
+    labels:
+      - project.scm=http://git.oa.isuwang.com/isuwang-com/kuaisuadmin.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+      - project.dependency.2=http://git.oa.isuwang.com/isuwang-docker/jdk8.git@@master
+      - project.dependency.3=http://git.oa.isuwang.com/isuwang-docker/tomcat7-jdk8.git@@master
+
+
+  kuaisu:
+    container_name: kuaisu
+    image: docker.oa.isuwang.com:5000/kuaisu:h_06_02
+    env_file:
+     - ./envs/db.env
+     - ./envs/common.env
+     - ./envs/3rd_party.env
+     - ./envs/services.env
+    environment:
+     - RUN_MODE=RELEASE
+     - PUBLISH_MODE=TEST
+     - BRANCH_MODE=MASTER
+
+     - WEIXIN_APPID=wx860adf0c6fb58fd8
+     - WEIXIN_SECRET=4f356fded9191e30095c660d3f827981
+     - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jun.encoding=UTF-8 -Dname=kuaisu-hotfixes -Xms128m -Xmx384m -Xss256K -XX:PermSize=128m -XX:MaxPermSize=384m -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=9996 -Xloggc:/tomcat/logs/gc.log -XX:+PrintGCDateStamps -XX:+PrintGCDetails -XX:NewRatio=1 -XX:SurvivorRatio=30 -XX:+UseParallelGC -XX:+UseParallelOldGC
+
+    ports:
+      - "9023:22"
+      - "5050:8080"
+      - "9992:9996"
+    extra_hosts:
+      - "redis:${redis_host_ip}"
+      - "mysql:${mysql_host_ip}"
+      - "zookeeper:${zookeeper_host_ip}"
+    labels:
+      - project.scm=http://git.oa.isuwang.com/isuwang-com/kuaisu.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+      - project.dependency.2=http://git.oa.isuwang.com/isuwang-docker/jdk8.git@@master
+      - project.dependency.3=http://git.oa.isuwang.com/isuwang-docker/tomcat7-jdk8.git@@master
+
+  isuwang-app:
+    container_name: isuwang-app
+    image: docker.oa.isuwang.com:5000/isuwang-app:dev
+    env_file:
+     - ./envs/db.env
+     - ./envs/common.env
+     - ./envs/3rd_party.env
+     - ./envs/services.env
+    environment:
+     - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jun.encoding=UTF-8 -Dname=kuaisu-hotfixes -Xms128m -Xmx384m -Xss256K -XX:PermSize=128m -XX:MaxPermSize=384m -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=9996 -Xloggc:/tomcat/logs/gc.log -XX:+PrintGCDateStamps -XX:+PrintGCDetails -XX:NewRatio=1 -XX:SurvivorRatio=30 -XX:+UseParallelGC -XX:+UseParallelOldGC
+
+    ports:
+      - "9024:22"
+      - "3030:8080"
+      - "9994:9996"
+    extra_hosts:
+      - "redis:${redis_host_ip}"
+      - "mysql:${mysql_host_ip}"
+      - "zookeeper:${zookeeper_host_ip}"
+    labels:
+      - project.scm=http://git.oa.isuwang.com/isuwang-com/isuwang-app.git@@master
+      - project.dependency.1=http://git.oa.isuwang.com/isuwang-docker/base-image.git@@master
+      - project.dependency.2=http://git.oa.isuwang.com/isuwang-docker/jdk8.git@@master
+      - project.dependency.3=http://git.oa.isuwang.com/isuwang-docker/tomcat7-jdk8.git@@master
