@@ -57,10 +57,12 @@ class Context {
 
       val depends: Array[String] = labels.getOrElse("project.depends","").split(",").map(_.trim).filterNot(_.isEmpty)
 
-      val buildDepends = labels.filterKeys(_.startsWith("project.build-depends.")).map { case(key, value) =>
+      val buildDepends = labels.filterKeys(_.startsWith("project.build-depends.")).toList
+        .sortBy(i => (i._1.substring(i._1.lastIndexOf(".") + 1)).toInt)
+        .map { case(_, value) =>
         val Pattern(gitURL, name, branch) = value
         Service(name, name, gitURL, branch, Nil, Nil, Nil, "")
-      }.toList
+      }
 
       Service(name = name, projectName = gitName, gitURL =  gitURL, gitBranch = gitBranch,
         relatedSources = relatedSources:::buildDepends, depends = depends.toList, buildDepends = buildDepends, image = service("image").toString)
